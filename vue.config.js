@@ -18,10 +18,24 @@ module.exports = {
     ],
     module: {
       rules: [
+        {
+          test: /\.ts$/,
+          exclude: /node_modules/,
+          enforce: 'pre',
+          loader: 'tslint-loader'
+        },
+        {
+          test: /\.tsx?$/,
+          loader: 'ts-loader',
+          exclude: /node_modules/,
+          options: {
+            appendTsSuffixTo: [/\.vue$/]
+          }
+        }
       ],
     },
     resolve: {
-      extensions: ['.js', '.json', '.css'],
+      extensions: ['.js', '.ts', '.json', '.css'],
       alias: {
         '@': path.resolve('src'),
         cesium: path.resolve(__dirname, cesiumBuild)
