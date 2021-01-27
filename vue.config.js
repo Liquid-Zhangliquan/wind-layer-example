@@ -1,6 +1,7 @@
 const path = require('path');
 const CopyWebpackPlugin = require('copy-webpack-plugin')
-const cesiumBuild = './node_modules/cesium/Build/Cesium';
+const cesiumBuild = './node_modules/cesium/Build/Cesium'
+const testWorker = /\.worker\.js$/
 module.exports = {
   publicPath: './',
   devServer: {
@@ -11,6 +12,12 @@ module.exports = {
   productionSourceMap: false,
   chainWebpack: config => {
     config.performance.set('hints', false);
+    config.module.rule('js').exclude.add(testWorker)
+    config.module
+      .rule('worker')
+      .test(testWorker)
+      .use('worker-loader')
+      .loader('worker-loader')
   },
   configureWebpack: {
     plugins: [

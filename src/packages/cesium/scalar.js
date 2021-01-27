@@ -15,15 +15,14 @@ const _options = {
   },
 };
 
-class CesiumWindGlCore {
-  constructor(data, options = {}) {
+class CesiumWindScalar {
+  constructor(id, data, options = {}) {
     this.canvas = null;
-    this.gl = null;
-    this.wind = null;
-    this.field = null;
+    this.windScalar = null;
+    this.field = data;
     this.viewer = null;
-    this.options = assign({}, options);
-    this.pickWindOptions();
+    this.options = assign({}, _options, options || {});
+    // this.pickWindOptions();
 
     const canvas = document.createElement('canvas');
     canvas.style.cssText =
@@ -31,10 +30,8 @@ class CesiumWindGlCore {
     canvas.className = 'cesium-wind-j';
     this.canvas = canvas;
     this.createContext();
-
-    if (data) {
-      this.setData(data);
-    }
+    this.appendCanvas();
+    this.render(this.canvas);
   }
 
   clearCanvas() {
@@ -62,8 +59,8 @@ class CesiumWindGlCore {
     if (!this.viewer) {
       return;
     }
-    if (this.wind) {
-      this.wind.stop();
+    if (this.windScalar) {
+      this.windScalar.stop();
     }
     if (this.canvas) {
       removeDomNode(this.canvas);
@@ -75,30 +72,39 @@ class CesiumWindGlCore {
     this.remove();
   }
 
+  getMatrix() {
+    return [1.4640625, 0, 0, 0, 0, 3, 0, 0, 0, 0, -1.2440796370662253, -1, -56432.72961699555, -88626.40177426653, 44975.75592036292, 44976]
+  }
+
   setData(data) {
-    if (data && data.checkFields && data.checkFields()) {
-      this.field = data;
-    } else if (isArray(data)) {
-      this.field = formatData(data);
-    } else {
-      console.error('Illegal data');
-    }
-
-    if (this.viewer && this.canvas && this.field) {
-      this.wind.updateData(this.field);
-      this.appendCanvas();
-      this.render(this.canvas);
-    }
-
-    return this;
+    return new Promise((resolve, reject) => {
+      this.data = data;
+      if (this.data && this.gl && this.windScalar) {
+        this.windScalar.setData(this.data, (status) => {
+          if (status) {
+            resolve(true);
+          } else {
+            reject(false);
+          }
+        });
+      } else {
+        resolve(false);
+      }
+    });
   }
 
   getData() {
     return this.field;
   }
 
+  setWindOptions(options) {
+    // const _windOptions = assign(this.options.windOptions, options);
+    // this.options.windOptions = _windOptions;
+    // this.windScalar.setOptions(_windOptions);
+  }
+
   getWindOptions() {
-    return this.options.windOptions || {};
+    return this.options || {};
   }
 
   pickWindOptions() {
@@ -140,6 +146,9 @@ class CesiumWindGlCore {
     canvas.height = height * devicePixelRatio;
     canvas.style.width = width + 'px';
     canvas.style.height = height + 'px';
+    if (this.gl) {
+      this.gl.viewport(0, 0, canvas.width, canvas.height);
+    }
   }
 
   render(canvas) {
@@ -147,36 +156,27 @@ class CesiumWindGlCore {
       return this;
     }
     const opt = this.getWindOptions();
-    if (canvas && !this.wind) {
-      const data = this.getData();
+    const data = this.getData();
+    if (this.gl && canvas && !this.windScalar) {
+      this.windScalar = new ScalarCore(this.gl, {
+        opacity: opt.opacity,
+        renderForm: opt.renderForm,
+        styleSpec: opt.styleSpec,
+        getZoom: 3,
+        triggerRepaint: () => {
+          this.render(canvas);
+        }
+      });
 
-      // const ctx = this.getContext();
 
-      // if (ctx) {
-      //   this.wind = new WindCore(ctx, opt, data);
+      this.windScalar.getMercatorCoordinate = this.project.bind(this);
 
-      //   this.wind.project = this.project.bind(this);
-      //   this.wind.unproject = this.unproject.bind(this);
-      //   this.wind.intersectsCoordinate = this.intersectsCoordinate.bind(this);
-      //   this.wind.postrender = () => {
-      //   };
-      // }
-      if (this.gl && canvas && !this.wind) {
-        this.wind = new ScalarCore(this.gl, {
-          opacity: opt.opacity,
-          renderForm: opt.renderForm,
-          styleSpec: opt.styleSpec,
-        });
-
-        this.wind.getMercatorCoordinate = this.project.bind(this);
-
-        this.wind.setData(data);
-      }
+      this.setData(data);
     }
 
-    if (this.wind) {
-      this.wind.prerender();
-      this.wind.render();
+    if (this.windScalar) {
+      // this.windScalar.updateOptions(this.options);
+      this.windScalar.render(this.getMatrix(), 0);
     }
 
     return this;
@@ -194,33 +194,6 @@ class CesiumWindGlCore {
     );
     return [sceneCoor.x, sceneCoor.y];
   }
-
-  unproject(pixel) {
-    const viewer = this.viewer;
-    const pick = new Cesium.Cartesian2(pixel[0], pixel[1]);
-    const cartesian = viewer.scene.globe.pick(
-      viewer.camera.getPickRay(pick),
-      viewer.scene,
-    );
-
-    if (!cartesian) {
-      return null;
-    }
-
-    const ellipsoid = viewer.scene.globe.ellipsoid;
-    const cartographic = ellipsoid.cartesianToCartographic(cartesian);
-    const lat = Cesium.Math.toDegrees(cartographic.latitude);
-    const lng = Cesium.Math.toDegrees(cartographic.longitude);
-    return [lng, lat];
-  }
-
-  intersectsCoordinate(coordinate) {
-    const ellipsoid = Cesium.Ellipsoid.WGS84;
-    const camera = this.viewer.camera;
-    const occluder = new Cesium.EllipsoidalOccluder(ellipsoid, camera.position);
-    const point = Cesium.Cartesian3.fromDegrees(coordinate[0], coordinate[1]);
-    return occluder.isPointVisible(point);
-  }
 }
 
-export default CesiumWindGlCore;
+export default CesiumWindScalar;
