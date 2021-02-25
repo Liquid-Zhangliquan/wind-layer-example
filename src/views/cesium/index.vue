@@ -49,7 +49,7 @@ export default {
       fetch('data/wind.json')
         .then(res => res.json())
         .then(res => {
-          const windLayer = new WindLayer(res, { windOptions });
+          window.windLayer = new WindLayer(res, { windOptions });
           windLayer.addTo(viewer);
           this.initGui(windLayer);
         });

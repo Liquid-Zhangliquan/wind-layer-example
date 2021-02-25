@@ -6,25 +6,52 @@ class CesiumWind {
     this.canvas = null;
     this.wind = null;
     this.field = null;
+    this.data = data;
     this.viewer = null;
     this.options = assign({}, options);
     this.pickWindOptions();
+    this.initCanvas()
+    if (data) {
+      this.setData(data);
+    }
+  }
 
+  initCanvas() {
     const canvas = document.createElement('canvas');
     canvas.style.cssText =
       'position:absolute; left:0; top:0;user-select:none;pointer-events: none;';
     canvas.className = 'cesium-wind-j';
     this.canvas = canvas;
+  }
 
-    if (data) {
-      this.setData(data);
-    }
+  canvasHandleHidden = () => {
+    this.canvas.style.visibility = 'hidden'
+    // this.remove();
+    // this.wind.stop();
+  }
+  canvasHandleShow = () => {
+    this.canvas.style.visibility = 'visible'
+    // this.initCanvas()
+    // this.appendCanvas();
+    // this.render(this.canvas);
+    // this.wind.start();
+  }
+
+  initHandle() {
+    this.viewer.camera.changed.addEventListener(this.canvasHandleHidden)
+    this.viewer.camera.moveEnd.addEventListener(this.canvasHandleShow)
+  }
+
+  removeHandle() {
+    this.viewer.camera.changed.removeEventListener(this.canvasHandleHidden)
+    this.viewer.camera.moveEnd.removeEventListener(this.canvasHandleShow)
   }
 
   addTo(viewer) {
     this.viewer = viewer;
     this.appendCanvas();
     this.render(this.canvas);
+    this.initHandle()
   }
 
   remove() {
@@ -33,6 +60,7 @@ class CesiumWind {
     }
     if (this.wind) {
       this.wind.stop();
+      delete this.wind
     }
     if (this.canvas) {
       removeDomNode(this.canvas);
@@ -42,6 +70,7 @@ class CesiumWind {
 
   removeLayer() {
     this.remove();
+    this.removeHandle()
   }
 
   setData(data) {
