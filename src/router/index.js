@@ -22,6 +22,11 @@ const routes = [
     path: '/maptalks-wind',
     name: 'maptalks-wind',
     component: () => import('../views/maptalks/index')
+  },
+  {
+    path: '/maptalks-scalar',
+    name: 'maptalks-scalar',
+    component: () => import('../views/maptalks/index2')
   }
 ]
 
